@@ -1,0 +1,523 @@
+import sqlite3
+import os
+from typing import Optional, Dict, Any, List, Tuple
+from dataclasses import dataclass, field
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+import base64
+import secrets
+import json
+
+@dataclass
+class AttendanceSettings:
+    rename_enabled: bool = False
+    staff_role_id: Optional[int] = None
+    rename_format_member: str = '{name}'
+    rename_format_staff: str = '幹部 | {name}'
+
+class TenantDB:
+    def __init__(self, db_path: str = "data/tenant.db"):
+        self.db_path = db_path
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        self.init_db()
+
+    def init_db(self):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.executescript("""
+                CREATE TABLE IF NOT EXISTS orgs (
+                    guild_id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    admin_role_id INTEGER,
+                    officer_role_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                import sqlite3
+import os
+from typing import Optional, Dict, Any, List, Tuple
+from dataclasses import dataclass, field, asdict
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+import base64
+import secrets
+import json
+
+@dataclass
+class AttendanceSettings:
+    rename_enabled: bool = False
+    staff_role_id: Optional[int] = None
+    rename_format_member: str = '{name}'
+    rename_format_staff: str = '幹部 | {name}'
+
+@dataclass
+class BookkeepingSettings:
+    start_row: int = 2
+    date_col: str = 'A'
+    category_col: str = 'B'
+    amount_col: str = 'C'
+    memo_col: str = 'D'
+    user_col: str = 'E'
+
+class TenantDB:
+    def __init__(self, db_path: str = "data/tenant.db"):
+        self.db_path = db_path
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        self.init_db()
+
+    def init_db(self):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.executescript("""
+                CREATE TABLE IF NOT EXISTS orgs (
+                    guild_id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    admin_role_id INTEGER,
+                    officer_role_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS org_configs (
+                    guild_id INTEGER PRIMARY KEY,
+                    ctfd_base_url TEXT,
+                    ciphertext_ctfd_token TEXT,
+                    ctfd_push_mode TEXT DEFAULT 'award',
+                    ctfd_award_name TEXT DEFAULT 'Discord QA',
+                    ctfd_award_category TEXT DEFAULT 'discord',
+                    excel_path TEXT,
+                    aes_key_b64 TEXT,
+                    default_signin_ttl INTEGER DEFAULT 30,
+                    canva_visible_after_signin BOOLEAN DEFAULT 1,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS org_modules (
+                    guild_id INTEGER,
+                    module TEXT,
+                    enabled BOOLEAN DEFAULT 1,
+                    PRIMARY KEY (guild_id, module)
+                );
+
+                CREATE TABLE IF NOT EXISTS registration_status (
+                    guild_id INTEGER PRIMARY KEY,
+                    status TEXT DEFAULT 'none',
+                    school TEXT,
+                    club_name TEXT,
+                    responsible_person TEXT,
+                    responsible_discord_id INTEGER,
+                    club_type TEXT,
+                    reason TEXT,
+                    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS routing (
+                    guild_id INTEGER,
+                    key TEXT,
+                    channel_id INTEGER,
+                    PRIMARY KEY (guild_id, key)
+                );
+
+                CREATE TABLE IF NOT EXISTS plans (
+                    guild_id INTEGER,
+                    week_key TEXT,
+                    group_name TEXT,
+                    content TEXT NOT NULL,
+                    PRIMARY KEY (guild_id, week_key, group_name)
+                );
+
+                CREATE TABLE IF NOT EXISTS plan_groups (
+                    guild_id INTEGER,
+                    user_id INTEGER,
+                    group_name TEXT NOT NULL,
+                    PRIMARY KEY (guild_id, user_id)
+                );
+
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id INTEGER NOT NULL,
+                    channel_id INTEGER NOT NULL,
+                    code TEXT NOT NULL,
+                    expire_at TIMESTAMP NOT NULL,
+                    active BOOLEAN DEFAULT 1,
+                    canva_url TEXT,
+                    outline TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS records (
+                    session_id INTEGER,
+                    user_id INTEGER,
+                    username TEXT NOT NULL,
+                    ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (session_id, user_id)
+                );
+
+                CREATE TABLE IF NOT EXISTS scores (
+                    guild_id INTEGER,
+                    user_id INTEGER,
+                    score INTEGER DEFAULT 0,
+                    PRIMARY KEY (guild_id, user_id)
+                );
+
+                CREATE TABLE IF NOT EXISTS ctfd_links (
+                    guild_id INTEGER,
+                    discord_user_id INTEGER,
+                    email TEXT NOT NULL,
+                    ctfd_user_id INTEGER,
+                    PRIMARY KEY (guild_id, discord_user_id)
+                );
+            """)
+
+            # Add new columns for attendance settings if they don't exist
+            table_info = cursor.execute("PRAGMA table_info(org_configs)").fetchall()
+            column_names = [info[1] for info in table_info]
+
+            if 'attendance_rename_enabled' not in column_names:
+                cursor.execute("ALTER TABLE org_configs ADD COLUMN attendance_rename_enabled BOOLEAN DEFAULT 0")
+            if 'attendance_staff_role_id' not in column_names:
+                cursor.execute("ALTER TABLE org_configs ADD COLUMN attendance_staff_role_id INTEGER")
+            if 'attendance_rename_format_member' not in column_names:
+                cursor.execute("ALTER TABLE org_configs ADD COLUMN attendance_rename_format_member TEXT DEFAULT '{name}'")
+            if 'attendance_rename_format_staff' not in column_names:
+                cursor.execute("ALTER TABLE org_configs ADD COLUMN attendance_rename_format_staff TEXT DEFAULT '幹部 | {name}'")
+            if 'bookkeeping_layout' not in column_names:
+                cursor.execute("ALTER TABLE org_configs ADD COLUMN bookkeeping_layout TEXT")
+
+
+    def get_registration_status(self, guild_id: int) -> Optional[Dict[str, Any]]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                "SELECT * FROM registration_status WHERE guild_id = ?",
+                (guild_id,)
+            )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def set_registration_status(self, guild_id: int, status: str, reason: str = None):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO registration_status
+                (guild_id, status, reason, updated_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            """, (guild_id, status, reason))
+
+    def save_registration(self, guild_id: int, school: str, club_name: str,
+                         responsible_person: str, responsible_discord_id: int, club_type: str):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO registration_status
+                (guild_id, status, school, club_name, responsible_person,
+                 responsible_discord_id, club_type, updated_at)
+                VALUES (?, 'pending', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, (guild_id, school, club_name, responsible_person, responsible_discord_id, club_type))
+
+    def get_enabled_modules(self, guild_id: int) -> List[str]:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                "SELECT module FROM org_modules WHERE guild_id = ? AND enabled = 1",
+                (guild_id,)
+            )
+            return [row[0] for row in cursor.fetchall()]
+
+    def set_module_enabled(self, guild_id: int, module: str, enabled: bool):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO org_modules (guild_id, module, enabled)
+                VALUES (?, ?, ?)
+            """, (guild_id, module, enabled))
+
+    def enable_default_modules(self, guild_id: int):
+        default_modules = ['attendance', 'plans', 'qa', 'crypto', 'bookkeeping', 'ctfd']
+        with sqlite3.connect(self.db_path) as conn:
+            for module in default_modules:
+                conn.execute("""
+                    INSERT OR REPLACE INTO org_modules (guild_id, module, enabled)
+                    VALUES (?, ?, 1)
+                """, (guild_id, module))
+
+    def get_attendance_settings(self, guild_id: int) -> 'AttendanceSettings':
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT * FROM org_configs WHERE guild_id = ?", (guild_id,))
+            row = cursor.fetchone()
+            if row:
+                return AttendanceSettings(
+                    rename_enabled=bool(row['attendance_rename_enabled']),
+                    staff_role_id=row['attendance_staff_role_id'],
+                    rename_format_member=row['attendance_rename_format_member'],
+                    rename_format_staff=row['attendance_rename_format_staff']
+                )
+        # Return default settings if no record found
+        return AttendanceSettings()
+
+    def set_attendance_setting(self, guild_id: int, key: str, value: Any):
+        valid_keys = [
+            'attendance_rename_enabled',
+            'attendance_staff_role_id',
+            'attendance_rename_format_member',
+            'attendance_rename_format_staff'
+        ]
+        if key not in valid_keys:
+            raise ValueError(f"Invalid setting key: {key}")
+
+        with sqlite3.connect(self.db_path) as conn:
+            # Ensure a config row exists
+            conn.execute("INSERT OR IGNORE INTO org_configs (guild_id) VALUES (?)", (guild_id,))
+            conn.execute(f"UPDATE org_configs SET {key} = ? WHERE guild_id = ?", (value, guild_id))
+
+    def get_bookkeeping_settings(self, guild_id: int) -> 'BookkeepingSettings':
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("SELECT bookkeeping_layout FROM org_configs WHERE guild_id = ?", (guild_id,))
+            row = cursor.fetchone()
+            if row and row[0]:
+                try:
+                    settings_dict = json.loads(row[0])
+                    return BookkeepingSettings(**settings_dict)
+                except (json.JSONDecodeError, TypeError):
+                    return BookkeepingSettings()
+        return BookkeepingSettings()
+
+    def set_bookkeeping_settings(self, guild_id: int, settings: 'BookkeepingSettings'):
+        settings_json = json.dumps(asdict(settings))
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("INSERT OR IGNORE INTO org_configs (guild_id) VALUES (?)", (guild_id,))
+            conn.execute("UPDATE org_configs SET bookkeeping_layout = ? WHERE guild_id = ?", (settings_json, guild_id))
+
+
+class CryptoManager:
+    def __init__(self, master_key_b64: str):
+        self.master_key = base64.b64decode(master_key_b64)
+        if len(self.master_key) != 32:
+            raise ValueError("Master key must be 32 bytes")
+
+    def encrypt(self, plaintext: str) -> str:
+        iv = secrets.token_bytes(12)
+        cipher = Cipher(algorithms.AES(self.master_key), modes.GCM(iv))
+        encryptor = cipher.encryptor()
+        ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
+
+        encrypted_data = iv + encryptor.tag + ciphertext
+        return base64.b64encode(encrypted_data).decode()
+
+    def decrypt(self, ciphertext_b64: str) -> str:
+        try:
+            encrypted_data = base64.b64decode(ciphertext_b64)
+            iv = encrypted_data[:12]
+            tag = encrypted_data[12:28]
+            ciphertext = encrypted_data[28:]
+
+            cipher = Cipher(algorithms.AES(self.master_key), modes.GCM(iv, tag))
+            decryptor = cipher.decryptor()
+            plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+            return plaintext.decode()
+        except Exception:
+            raise ValueError("Failed to decrypt data")
+
+tenant_db = TenantDB()
+
+
+                CREATE TABLE IF NOT EXISTS org_modules (
+                    guild_id INTEGER,
+                    module TEXT,
+                    enabled BOOLEAN DEFAULT 1,
+                    PRIMARY KEY (guild_id, module)
+                );
+
+                CREATE TABLE IF NOT EXISTS registration_status (
+                    guild_id INTEGER PRIMARY KEY,
+                    status TEXT DEFAULT 'none',
+                    school TEXT,
+                    club_name TEXT,
+                    responsible_person TEXT,
+                    responsible_discord_id INTEGER,
+                    club_type TEXT,
+                    reason TEXT,
+                    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS routing (
+                    guild_id INTEGER,
+                    key TEXT,
+                    channel_id INTEGER,
+                    PRIMARY KEY (guild_id, key)
+                );
+
+                CREATE TABLE IF NOT EXISTS plans (
+                    guild_id INTEGER,
+                    week_key TEXT,
+                    group_name TEXT,
+                    content TEXT NOT NULL,
+                    PRIMARY KEY (guild_id, week_key, group_name)
+                );
+
+                CREATE TABLE IF NOT EXISTS plan_groups (
+                    guild_id INTEGER,
+                    user_id INTEGER,
+                    group_name TEXT NOT NULL,
+                    PRIMARY KEY (guild_id, user_id)
+                );
+
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id INTEGER NOT NULL,
+                    channel_id INTEGER NOT NULL,
+                    code TEXT NOT NULL,
+                    expire_at TIMESTAMP NOT NULL,
+                    active BOOLEAN DEFAULT 1,
+                    canva_url TEXT,
+                    outline TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS records (
+                    session_id INTEGER,
+                    user_id INTEGER,
+                    username TEXT NOT NULL,
+                    ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (session_id, user_id)
+                );
+
+                CREATE TABLE IF NOT EXISTS scores (
+                    guild_id INTEGER,
+                    user_id INTEGER,
+                    score INTEGER DEFAULT 0,
+                    PRIMARY KEY (guild_id, user_id)
+                );
+
+                CREATE TABLE IF NOT EXISTS ctfd_links (
+                    guild_id INTEGER,
+                    discord_user_id INTEGER,
+                    email TEXT NOT NULL,
+                    ctfd_user_id INTEGER,
+                    PRIMARY KEY (guild_id, discord_user_id)
+                );
+            """)
+
+            # Add new columns for attendance settings if they don't exist
+            table_info = cursor.execute("PRAGMA table_info(org_configs)").fetchall()
+            column_names = [info[1] for info in table_info]
+
+            if 'attendance_rename_enabled' not in column_names:
+                cursor.execute("ALTER TABLE org_configs ADD COLUMN attendance_rename_enabled BOOLEAN DEFAULT 0")
+            if 'attendance_staff_role_id' not in column_names:
+                cursor.execute("ALTER TABLE org_configs ADD COLUMN attendance_staff_role_id INTEGER")
+            if 'attendance_rename_format_member' not in column_names:
+                cursor.execute("ALTER TABLE org_configs ADD COLUMN attendance_rename_format_member TEXT DEFAULT '{name}'")
+            if 'attendance_rename_format_staff' not in column_names:
+                cursor.execute("ALTER TABLE org_configs ADD COLUMN attendance_rename_format_staff TEXT DEFAULT '幹部 | {name}'")
+
+
+    def get_registration_status(self, guild_id: int) -> Optional[Dict[str, Any]]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                "SELECT * FROM registration_status WHERE guild_id = ?",
+                (guild_id,)
+            )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def set_registration_status(self, guild_id: int, status: str, reason: str = None):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO registration_status
+                (guild_id, status, reason, updated_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            """, (guild_id, status, reason))
+
+    def save_registration(self, guild_id: int, school: str, club_name: str,
+                         responsible_person: str, responsible_discord_id: int, club_type: str):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO registration_status
+                (guild_id, status, school, club_name, responsible_person,
+                 responsible_discord_id, club_type, updated_at)
+                VALUES (?, 'pending', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, (guild_id, school, club_name, responsible_person, responsible_discord_id, club_type))
+
+    def get_enabled_modules(self, guild_id: int) -> List[str]:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                "SELECT module FROM org_modules WHERE guild_id = ? AND enabled = 1",
+                (guild_id,)
+            )
+            return [row[0] for row in cursor.fetchall()]
+
+    def set_module_enabled(self, guild_id: int, module: str, enabled: bool):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO org_modules (guild_id, module, enabled)
+                VALUES (?, ?, ?)
+            """, (guild_id, module, enabled))
+
+    def enable_default_modules(self, guild_id: int):
+        default_modules = ['attendance', 'plans', 'qa', 'crypto', 'bookkeeping', 'ctfd']
+        with sqlite3.connect(self.db_path) as conn:
+            for module in default_modules:
+                conn.execute("""
+                    INSERT OR REPLACE INTO org_modules (guild_id, module, enabled)
+                    VALUES (?, ?, 1)
+                """, (guild_id, module))
+
+    def get_attendance_settings(self, guild_id: int) -> 'AttendanceSettings':
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT * FROM org_configs WHERE guild_id = ?", (guild_id,))
+            row = cursor.fetchone()
+            if row:
+                return AttendanceSettings(
+                    rename_enabled=bool(row['attendance_rename_enabled']),
+                    staff_role_id=row['attendance_staff_role_id'],
+                    rename_format_member=row['attendance_rename_format_member'],
+                    rename_format_staff=row['attendance_rename_format_staff']
+                )
+        # Return default settings if no record found
+        return AttendanceSettings()
+
+    def set_attendance_setting(self, guild_id: int, key: str, value: Any):
+        valid_keys = [
+            'attendance_rename_enabled',
+            'attendance_staff_role_id',
+            'attendance_rename_format_member',
+            'attendance_rename_format_staff'
+        ]
+        if key not in valid_keys:
+            raise ValueError(f"Invalid setting key: {key}")
+
+        with sqlite3.connect(self.db_path) as conn:
+            # Ensure a config row exists
+            conn.execute("INSERT OR IGNORE INTO org_configs (guild_id) VALUES (?)", (guild_id,))
+            conn.execute(f"UPDATE org_configs SET {key} = ? WHERE guild_id = ?", (value, guild_id))
+
+
+class CryptoManager:
+    def __init__(self, master_key_b64: str):
+        self.master_key = base64.b64decode(master_key_b64)
+        if len(self.master_key) != 32:
+            raise ValueError("Master key must be 32 bytes")
+
+    def encrypt(self, plaintext: str) -> str:
+        iv = secrets.token_bytes(12)
+        cipher = Cipher(algorithms.AES(self.master_key), modes.GCM(iv))
+        encryptor = cipher.encryptor()
+        ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
+
+        encrypted_data = iv + encryptor.tag + ciphertext
+        return base64.b64encode(encrypted_data).decode()
+
+    def decrypt(self, ciphertext_b64: str) -> str:
+        try:
+            encrypted_data = base64.b64decode(ciphertext_b64)
+            iv = encrypted_data[:12]
+            tag = encrypted_data[12:28]
+            ciphertext = encrypted_data[28:]
+
+            cipher = Cipher(algorithms.AES(self.master_key), modes.GCM(iv, tag))
+            decryptor = cipher.decryptor()
+            plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+            return plaintext.decode()
+        except Exception:
+            raise ValueError("Failed to decrypt data")
+
+tenant_db = TenantDB()

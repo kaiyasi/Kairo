@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  kairo:
+    build: .
+    image: serelix/kairo:full
+    container_name: kairo
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+      - .:/app:rw
+      - /mnt/data_pool_b/kaiyasi/:/mnt/data_pool_b/kaiyasi/:rw
+    ports:
+      - "12004:80"
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "echo -n ping | nc -w1 127.0.0.1 9000 | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

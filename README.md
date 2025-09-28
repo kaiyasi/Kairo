@@ -1,4 +1,4 @@
-# Kairo - 多租戶 Discord 機器人
+# Kairo - 多社團 Discord 機器人
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/) ![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)
 

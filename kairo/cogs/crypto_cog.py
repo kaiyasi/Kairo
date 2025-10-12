@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.brand import create_brand_embed, create_success_embed, create_error_embed
-from utils.crypto import CRYPTO_FUNCTIONS, is_long_text, create_text_file
+from ..utils.brand import create_brand_embed, create_success_embed, create_error_embed
+from ..utils.crypto import CRYPTO_FUNCTIONS, is_long_text, create_text_file
 import io
 
 class CryptoCog(commands.Cog):

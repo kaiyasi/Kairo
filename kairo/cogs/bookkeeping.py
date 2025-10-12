@@ -1,10 +1,10 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.brand import create_brand_embed, create_success_embed, create_error_embed
-from utils.excel import append_journal_entry, read_journal_balance, export_journal_csv, get_guild_excel_path
-from utils.google_sheets import GoogleSheetsManager, get_guild_google_sheets_url, set_guild_google_sheets_url
-from utils.tenant import tenant_db, BookkeepingSettings
+from ..utils.brand import create_brand_embed, create_success_embed, create_error_embed
+from ..utils.excel import append_journal_entry, read_journal_balance, export_journal_csv, get_guild_excel_path
+from ..utils.google_sheets import GoogleSheetsManager, get_guild_google_sheets_url, set_guild_google_sheets_url
+from ..utils.tenant import tenant_db, BookkeepingSettings
 import os
 import io
 from datetime import datetime

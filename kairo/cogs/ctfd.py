@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.brand import create_brand_embed, create_success_embed, create_error_embed
-from utils.tenant import tenant_db, CryptoManager
+from ..utils.brand import create_brand_embed, create_success_embed, create_error_embed
+from ..utils.tenant import tenant_db, CryptoManager
 import sqlite3
 import requests
 import os

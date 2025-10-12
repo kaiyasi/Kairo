@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.brand import create_brand_embed, create_success_embed
-from utils.tenant import tenant_db
+from ..utils.brand import create_brand_embed, create_success_embed
+from ..utils.tenant import tenant_db
 import os
 
 REVIEW_CHANNEL_ID = int(os.getenv('REVIEW_CHANNEL_ID', '1416406590411509860'))

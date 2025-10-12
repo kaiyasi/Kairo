@@ -2,7 +2,7 @@ import unittest
 import asyncio
 import io
 import discord
-from utils.crypto import is_long_text, create_text_file, base64_encode, base64_decode
+from ..utils.crypto import is_long_text, create_text_file, base64_encode, base64_decode
 
 class TestCryptoLongText(unittest.TestCase):
     def test_is_long_text(self):

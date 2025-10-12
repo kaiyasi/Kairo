@@ -1,5 +1,5 @@
 from typing import List, Optional
-from utils.tenant import tenant_db
+from .tenant import tenant_db
 import os
 
 SUPER_ADMIN_ID = int(os.getenv('SUPER_ADMIN_ID', '759651999036997672'))

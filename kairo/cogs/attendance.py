@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.brand import create_brand_embed, create_success_embed, create_error_embed
-from utils.tenant import tenant_db, AttendanceSettings
+from ..utils.brand import create_brand_embed, create_success_embed, create_error_embed
+from ..utils.tenant import tenant_db, AttendanceSettings
 from datetime import datetime, timedelta
 import sqlite3
 import io

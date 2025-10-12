@@ -2,7 +2,7 @@ import unittest
 import sqlite3
 import os
 import tempfile
-from utils.tenant import tenant_db
+from ..utils.tenant import tenant_db
 
 class TestChannelRouting(unittest.TestCase):
     def setUp(self):

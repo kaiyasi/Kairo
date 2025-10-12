@@ -7,7 +7,7 @@ import logging
 # Load environment variables first
 load_dotenv()
 
-from utils.visibility import get_visible_commands_for_guild, is_super_admin, get_super_admin_commands
+from kairo.utils.visibility import get_visible_commands_for_guild, is_super_admin, get_super_admin_commands
 
 ADMIN_GUILD_ID = int(os.getenv('ADMIN_GUILD_ID', '1405176396158079076'))
 
@@ -34,16 +34,16 @@ class KairoBot(commands.Bot):
 
         # Load all cogs
         cogs = [
-            'cogs.register',
-            'cogs.response',
-            'cogs.modules_admin',
-            'cogs.attendance',
-            'cogs.plans',
-            'cogs.qa',
-            'cogs.ctfd',
-            'cogs.crypto_cog',
-            'cogs.bookkeeping',
-            'cogs.routing'
+            'kairo.cogs.register',
+            'kairo.cogs.response',
+            'kairo.cogs.modules_admin',
+            'kairo.cogs.attendance',
+            'kairo.cogs.plans',
+            'kairo.cogs.qa',
+            'kairo.cogs.ctfd',
+            'kairo.cogs.crypto_cog',
+            'kairo.cogs.bookkeeping',
+            'kairo.cogs.routing'
         ]
 
         for cog in cogs:
